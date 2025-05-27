@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoNAT</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <link rel="icon" href="static/favicon.ico" type="image/x-icon">
+    <!-- SPECIES_COLORS_PLACEHOLDER -->
+    <script src="static/scripts.js" defer></script>
+</head>
+
+<div id="main-container">
+    <div id="network-container">
+        <!-- CLUSTERING_PLACEHOLDER -->
+    </div>
+        <div id="side-panel">
+            <div id="resizer">
+            </div>
+            <div id="node-details" style="display:none;">
+                <h3>Structure Viewer</h3>
+                <p>Compare 3D structures side-by-side for the selected node. The Structure Viewer window is interactable, and the specific targets for the selected node can be switched between, using the arrow buttons found below.</p>
+                <div id="node-name">Click on a node to enable Structure Viewer here</div>
+                <div style="margin:0.5em 0">
+                    <strong>Selected cluster:</strong>
+                    <span id="current-cluster">None</span>
+                </div>
+                <div id="structure-viewer"></div>
+                <div id="node-target-info">
+                    <p id="node-source"></p>
+                    <p id="target-source"></p>
+                </div>
+                <div id="target-selector">
+                    <button id="prev-target">&larr;</button>
+                    <span id="target-index"></span>
+                    <button id="next-target">&rarr;</button>
+                </div>
+                <div id="current-display"></div>
+                <div id="metrics-viewer" style="display:none"></div>
+                <div id="alignment-viewer" style="display:none"></div>
+            </div>
+            <div id="phylo-tree-panel" style="display:none;">
+                <h3>Phylogenetic Tree</h3>
+                <p>View the species-level dendrogram, constructed on the basis of a common-tree yielded from NCBI Taxonomy.</p>
+                <ul>
+                    <li><b>Leaf selection:</b> Click any species leaf to highlight all network nodes originating from that species.</li>
+                    <li><b>Node selection:</b> Upon selecting a node in the network, a red connector will be drawn to all directly associated species for that node.</li>
+                </ul>
+                <div id="phylo-tree"></div>
+                <button id="reset-species" style="margin-top:10px;">Reset Colors</button>
+            </div>
+                <div id="classification-panel" style="display:none;">
+                    <h3>Classification</h3>
+                    <p>Lookup clusters or classifications across the whole graph.</p>
+                    <ul>
+                        <li><b>Clusters:</b> Typing Cluster:N will result in a zoom to Cluster <i>N</i></li>
+                        <li><b>Classifications:</b> Typing any substring of a specific fold, GO-term or AFDB annotation, will list all nodes associated with the searched parameter </li>
+                    </ul>
+                    <div id="search-bar">
+                        <input
+                            type="text"
+                            id="search-box"
+                            placeholder="Search for specific clusters or classifications"
+                            style="width:90%; box-sizing:border-box; margin-bottom:0.5em"
+                        />
+                        <button id="search-btn">Search</button>
+                          <div id="search-results" style="display:none;
+                                   position:relative;
+                                   margin-top:0.5em;
+                                   margin-bottom:2em;
+                                   padding:0.5em;
+                                   border:1px solid #ccc;
+                                   background:white;
+                                   max-height:200px;
+                                   overflow-y:auto;">
+                        </div>
+                    </div>
+                    <!-- Using details/summary for individual collapsible sections -->
+                    <details class="table-details" open>
+                        <summary>AFDB Proteome (Node-based)</summary>
+                        <div class="grey-box">
+                            <table id="afdb-table">
+                                <thead>
+                                    <tr>
+                                        <th>Accession ID</th>
+                                        <th>Name</th>
+                                        <th>Molecular function GO-term</th>
+                                        <th>E-value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Node-based rows inserted here via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+
+                    <details class="table-details" open>
+                        <summary>VenomZone (Node-based)</summary>
+                        <div class="grey-box">
+                            <table id="venomzone-table">
+                                <thead>
+                                    <tr>
+                                        <th>Target Class</th>
+                                        <th>E-value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Node-based rows inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+
+                    <details class="table-details" open>
+                        <summary>VenomZone (Cluster-based)</summary>
+                        <div class="grey-box">
+                            <table id="cluster-table">
+                                <thead>
+                                    <tr>
+                                        <th>Class</th>
+                                        <th>Count in Network</th>
+                                        <th>Avg. E-value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Aggregated rows inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+
+                    <details class="table-details" open>
+                    <summary>Conotoxin (Node-based)</summary>
+                    <div class="grey-box">
+                        <table id="conotoxin-node-table">
+                        <thead>
+                            <tr><th>Class</th><th>E-value</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                        </table>
+                    </div>
+                    </details>
+
+                    <details class="table-details" open>
+                    <summary>Conotoxin (Cluster-based)</summary>
+                    <div class="grey-box">
+                        <table id="conotoxin-cluster-table">
+                        <thead>
+                            <tr><th>Class</th><th>Count in Network</th><th>Avg. E-value</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                        </table>
+                    </div>
+                    </details>
+                    </div>
+            <div id="af-heatmap-panel" style="display:none;">
+                <h3>Heatmap</h3>
+                <p>Broad overview of per-species confidence in specific toxin-folds based on E-value.</p>
+                <p>Venomzone specific toxin-fold heatmap.</p>
+                <p>The cells are colored based on the value retrieved from logarithmic transformation of the E-value:</p>
+                <ul>
+                    <li><span class="colsquare" style="background:#0d47a1"></span> <span class="colsquare" style="background:#155d27"></span> for -log<sub>10</sub>(E) >= 50</li>
+                    <li><span class="colsquare" style="background:#1976d2"></span> <span class="colsquare" style="background:#208b3a"></span> for -log<sub>10</sub>(E) >= 40</li>
+                    <li><span class="colsquare" style="background:#2196f3"></span> <span class="colsquare" style="background:#25a244"></span> for -log<sub>10</sub>(E) >= 30</li>
+                    <li><span class="colsquare" style="background:#64b5f6"></span> <span class="colsquare" style="background:#4ad66d"></span> for -log<sub>10</sub>(E) >= 20</li>
+                    <li><span class="colsquare" style="background:#90caf9"></span> <span class="colsquare" style="background:#6ede8a"></span> for -log<sub>10</sub>(E) >= 10</li>
+                    <li><span class="colsquare" style="background:#bbdefb"></span> <span class="colsquare" style="background:#92e6a7"></span> for -log<sub>10</sub>(E) >= 5</li>
+                    <li><span class="colsquare" style="background:#e3f2fd"></span> <span class="colsquare" style="background:#b7efc5"></span> for -log<sub>10</sub>(E) < 5</li>
+                </ul>
+                <div id="af-heatmap-content"></div>
+                <p>Conotoxin specific toxin-fold heatmap.</p>
+                <div id="cono-heatmap-content" style="margin-bottom:40px"></div>
+            </div>
+            <div id="upload-panel" style="display:none; padding:20px;">
+                <h3>Upload</h3>
+                <p>The 'upload' feature allows for searching your own PDB or mmCIF file against the existing network. The feature is built upon the invokation of external Foldseek calls, returning the top ten best hits for the individual file. The network will automatically pan towards the cluster, to which the best hit belongs (sorted by E-value). Note that depending on file size and server load, this operation may take a minute or two.</p>
+                <div id="drop-zone" class="drop-zone">
+                    <span class="material-icons">cloud_upload</span>
+                    <div class="description">
+                        <p class="manual">Click to upload</p>
+                        <p class="dragdrop">or drag and drop</p>
+                    </div class="description">
+                    <p class="file-type-info">.PDB, .mmCIF</p>
+                <input type="file" id="file-input" accept=".pdb,.cif" style="display:none;" />
+                </div>
+                <div id="dropped-file-info" style="margin-top:10px; font-style:italic; color:#333;">
+                No file selected.
+                </div>
+                <button id="classify-btn">Classify</button>
+                <div id="classify-result" style="margin-top:10px;"></div>
+                <div id="classify-summary" style="margin-top:30px;"></div>
+            </div>
+            <div id="export-panel" style="display:none; padding:20px;">
+            <h3>Export Data</h3>
+            <button id="export-btn">Download CSV</button>
+            <p style="font-size:0.9em; color:#666; margin-top:8px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet">    
+
+    <ul id="nav-bar">
+        <li><a class="active" href="#node">
+            <span class="material-icons">visibility</span>
+            Structure Viewer
+        </a></li>
+        <li><a href="#tree">
+            <span class="material-icons">account_tree</span>
+            Phylogenetic Tree
+        </a></li>
+        <li><a href="#af_classification">
+            <span class="material-icons">hub</span>
+            Classification
+        </a></li>
+        <li><a href="#heatmap">
+            <span class="material-icons">bar_chart</span>
+            Heatmap
+        </a></li>
+        <li><a href="#upload" id="upload-tab">
+            <span class="material-icons">file_upload</span>
+            Upload
+        </a></li>
+        <li class="nav-bottom"><a href="#export" id="export-tab">
+            <span class="material-icons">download</span>
+            Export Data
+        </a></li>
+    </ul>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+
+</html>
