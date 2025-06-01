@@ -1,0 +1,127 @@
+name: Build Cross-Platform App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ macos-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python & gdown
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller gdown
+
+      - name: Download backend data from Google Drive
+        shell: bash
+        env:
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+        run: |
+          mkdir -p backend
+          curl -L \
+            "https://drive.usercontent.google.com/download?id=${DRIVE_FOLDER_ID}&export=download$authuser=0&confirm" \
+            -o backend/backend.tar.gz
+          file backend/backend.tar.gz
+          tar -xzf backend/backend.tar.gz -C backend
+          ls backend/
+          rm backend/backend.tar.gz
+          
+      - name: Download Foldseek
+        shell: bash
+        run: |
+          mkdir -p foldseek
+
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            # macOS Universal build
+            URL="https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz"
+          else
+            # assume ubuntu-latest instead of windows-latest for Linux builds
+            # (Foldseek doesn't publish a native Windows binary)
+            URL="https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz"
+          fi
+
+          echo "Fetching Foldseek from $URL"
+          curl -L "$URL" -o foldseek/foldseek.tar.gz
+          tar -xvzf foldseek/foldseek.tar.gz -C foldseek --strip-components=1
+          rm foldseek/foldseek.tar.gz
+
+          # verify
+          chmod +x foldseek/bin/foldseek
+          ls -R foldseek
+
+      - name: Build standalone bundle
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            pyinstaller \
+              --name=CoNAT \
+              --onedir \
+              --noconsole \
+              --add-data=backend/AllSpecies:AllSpecies \
+              --add-data=backend/Superposed:Superposed \
+              --add-data=backend/images:images \
+              --add-data=backend/static/node_clusters.json:static \
+              --add-data=backend/static/node_clusters.json:. \
+              --add-data=backend/static/data.json:static \
+              --add-data=backend/static/scripts.js:static \
+              --add-data=backend/static/styles.css:static \
+              --add-data=backend/static/favicon.ico:. \
+              --add-data=backend/index.html:. \
+              --add-data=foldseek:foldseek \
+              --hidden-import=flask.cli \
+              flaskrun.py
+          else
+            pyinstaller \
+              --name=CoNAT \
+              --onedir \
+              --windowed \
+              --add-data=backend/AllSpecies:AllSpecies \
+              --add-data=backend/Superposed:Superposed \
+              --add-data=backend/images:images \
+              --add-data=backend/static/node_clusters.json:static \
+              --add-data=backend/static/node_clusters.json:. \
+              --add-data=backend/static/data.json:static \
+              --add-data=backend/static/scripts.js:static \
+              --add-data=backend/static/styles.css:static \
+              --add-data=backend/static/favicon.ico:. \
+              --add-data=backend/index.html:. \
+              --add-data=foldseek:foldseek \
+              --hidden-import=flask.cli \
+              flaskrun.py
+          fi
+
+      - name: Package macOS build
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          cd dist
+          zip -r CoNAT-macos.zip CoNAT.app
+
+      - name: Package Windows build
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # Compress the entire onedir folder into a zip
+          $src = Join-Path $Env:GITHUB_WORKSPACE "dist\CoNAT"
+          $dst = Join-Path $Env:GITHUB_WORKSPACE "dist\CoNAT-windows.zip"
+          if (Test-Path $dst) { Remove-Item $dst }
+          Compress-Archive -Path "$src\*" -DestinationPath $dst -Force
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-bundle
+          path: |
+            dist/CoNAT-*.zip
