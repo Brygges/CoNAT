@@ -13,7 +13,7 @@ import shutil
 
 # Determine base path
 if getattr(sys, 'frozen', False):
-    base_path = os.path.dirname(sys.executable)
+    base_path = sys._MEIPASS
 else:
     base_path = os.path.dirname(os.path.abspath(__file__))
 
